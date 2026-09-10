@@ -1,0 +1,205 @@
+{
+  "sha256": "54c6184ba860ecef07fd37f538d2bfc2c867a11252a6a5f7abb89aea5684a5e8",
+  "operations": [
+    {
+      "id": "createSignup",
+      "method": "POST",
+      "path": "/signup"
+    },
+    {
+      "id": "checkSlugAvailability",
+      "method": "GET",
+      "path": "/signup/check-slug"
+    },
+    {
+      "id": "getAccount",
+      "method": "GET",
+      "path": "/account"
+    },
+    {
+      "id": "deleteAccount",
+      "method": "DELETE",
+      "path": "/account"
+    },
+    {
+      "id": "sendWelcomeEmail",
+      "method": "POST",
+      "path": "/account/welcome"
+    },
+    {
+      "id": "setPostVerifyTarget",
+      "method": "POST",
+      "path": "/account/post-verify-target"
+    },
+    {
+      "id": "listApiKeys",
+      "method": "GET",
+      "path": "/api-keys"
+    },
+    {
+      "id": "createApiKey",
+      "method": "POST",
+      "path": "/api-keys"
+    },
+    {
+      "id": "revokeApiKey",
+      "method": "DELETE",
+      "path": "/api-keys/{id}"
+    },
+    {
+      "id": "listMailboxes",
+      "method": "GET",
+      "path": "/mailboxes"
+    },
+    {
+      "id": "createMailbox",
+      "method": "POST",
+      "path": "/mailboxes"
+    },
+    {
+      "id": "getMailbox",
+      "method": "GET",
+      "path": "/mailboxes/{id}"
+    },
+    {
+      "id": "updateMailbox",
+      "method": "PATCH",
+      "path": "/mailboxes/{id}"
+    },
+    {
+      "id": "deleteMailbox",
+      "method": "DELETE",
+      "path": "/mailboxes/{id}"
+    },
+    {
+      "id": "listMessages",
+      "method": "GET",
+      "path": "/mailboxes/{id}/messages"
+    },
+    {
+      "id": "sendMessage",
+      "method": "POST",
+      "path": "/mailboxes/{id}/messages"
+    },
+    {
+      "id": "getMessage",
+      "method": "GET",
+      "path": "/mailboxes/{id}/messages/{msgId}"
+    },
+    {
+      "id": "listThreads",
+      "method": "GET",
+      "path": "/mailboxes/{id}/threads"
+    },
+    {
+      "id": "getThread",
+      "method": "GET",
+      "path": "/mailboxes/{id}/threads/{tid}"
+    },
+    {
+      "id": "uploadAttachment",
+      "method": "POST",
+      "path": "/attachments"
+    },
+    {
+      "id": "downloadAttachment",
+      "method": "GET",
+      "path": "/attachments/{id}"
+    },
+    {
+      "id": "deleteAttachment",
+      "method": "DELETE",
+      "path": "/attachments/{id}"
+    },
+    {
+      "id": "listDomains",
+      "method": "GET",
+      "path": "/domains"
+    },
+    {
+      "id": "createDomain",
+      "method": "POST",
+      "path": "/domains"
+    },
+    {
+      "id": "getDomain",
+      "method": "GET",
+      "path": "/domains/{id}"
+    },
+    {
+      "id": "deleteDomain",
+      "method": "DELETE",
+      "path": "/domains/{id}"
+    },
+    {
+      "id": "verifyDomain",
+      "method": "POST",
+      "path": "/domains/{id}/verify"
+    },
+    {
+      "id": "listWebhooks",
+      "method": "GET",
+      "path": "/webhooks"
+    },
+    {
+      "id": "createWebhook",
+      "method": "POST",
+      "path": "/webhooks"
+    },
+    {
+      "id": "getWebhook",
+      "method": "GET",
+      "path": "/webhooks/{id}"
+    },
+    {
+      "id": "updateWebhook",
+      "method": "PATCH",
+      "path": "/webhooks/{id}"
+    },
+    {
+      "id": "deleteWebhook",
+      "method": "DELETE",
+      "path": "/webhooks/{id}"
+    },
+    {
+      "id": "listWebhookDeliveries",
+      "method": "GET",
+      "path": "/webhooks/{id}/deliveries"
+    },
+    {
+      "id": "streamEvents",
+      "method": "GET",
+      "path": "/events"
+    },
+    {
+      "id": "listSuppressions",
+      "method": "GET",
+      "path": "/suppressions"
+    },
+    {
+      "id": "createSuppression",
+      "method": "POST",
+      "path": "/suppressions"
+    },
+    {
+      "id": "deleteSuppression",
+      "method": "DELETE",
+      "path": "/suppressions/{id}"
+    },
+    {
+      "id": "createUpgradeCheckout",
+      "method": "POST",
+      "path": "/billing/upgrade"
+    },
+    {
+      "id": "resendVerificationEmail",
+      "method": "POST",
+      "path": "/auth/resend-verification"
+    },
+    {
+      "id": "submitSupportTicket",
+      "method": "POST",
+      "path": "/support"
+    }
+  ]
+}

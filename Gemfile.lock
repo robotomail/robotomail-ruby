@@ -1,0 +1,28 @@
+PATH
+  remote: .
+  specs:
+    robotomail (0.1.0)
+      net-http (>= 0.4, < 1)
+      openssl (>= 3, < 5)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    minitest (5.27.0)
+    net-http (0.9.1)
+      uri (>= 0.11.1)
+    openssl (4.0.2)
+    uri (1.1.1)
+
+PLATFORMS
+  aarch64-linux
+  arm64-darwin-23
+  ruby
+  x86_64-linux
+
+DEPENDENCIES
+  minitest (~> 5.25)
+  robotomail!
+
+BUNDLED WITH
+   2.6.9

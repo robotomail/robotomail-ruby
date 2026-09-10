@@ -1,0 +1,1359 @@
+[
+  {
+    "id": "createSignup",
+    "method": "POST",
+    "request_path": "/signup",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "email": "fixture@example.com",
+      "password": "fixture-password-123",
+      "slug": "sample-slug",
+      "name": "sample-name",
+      "plan": "sample-plan",
+      "period": "sample-period",
+      "turnstileToken": "sample-turnstileToken"
+    },
+    "upload": false,
+    "response": {
+      "user": {
+        "id": "sample-id",
+        "email": "fixture@example.com",
+        "slug": "sample-slug",
+        "name": "sample-name",
+        "plan": "free",
+        "platform_email": "fixture@example.com"
+      },
+      "api_key": {
+        "key": "sample-key",
+        "prefix": "sample-prefix",
+        "name": "default"
+      },
+      "mailbox": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "address": "sample-address",
+        "fullAddress": "fixture@example.com",
+        "status": "ACTIVE"
+      },
+      "mailbox_limit": 2,
+      "daily_send_limit": 2,
+      "monthly_send_limit": 2,
+      "email_verified": false,
+      "next_steps": {
+        "verify_email": "sample-verify_email",
+        "add_payment": "sample-add_payment",
+        "add_domain": "sample-add_domain",
+        "send_email": "sample-send_email"
+      }
+    },
+    "status": 201
+  },
+  {
+    "id": "checkSlugAvailability",
+    "method": "GET",
+    "request_path": "/signup/check-slug",
+    "paths": [],
+    "params": {
+      "slug": "sample-slug"
+    },
+    "query": {
+      "slug": "sample-slug"
+    },
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "available": false,
+      "reason": "sample-reason"
+    },
+    "status": 200
+  },
+  {
+    "id": "getAccount",
+    "method": "GET",
+    "request_path": "/account",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "account": {
+        "id": "sample-id",
+        "email": "fixture@example.com",
+        "emailVerified": false,
+        "slug": "sample-slug",
+        "plan": "sample-plan",
+        "billingPeriod": "sample-billingPeriod",
+        "suspended": false,
+        "suspendedReason": "sample-suspendedReason",
+        "suspendedAt": "2026-09-10T12:00:00.000Z",
+        "storageUsedBytes": 2,
+        "storageLimitBytes": 2,
+        "mailboxCount": 2,
+        "activeMailboxCount": 2,
+        "sentToday": 2,
+        "sentThisMonth": 2,
+        "receivedToday": 2,
+        "bouncedToday": 2,
+        "monthlyInboundCount": 2,
+        "monthlyInboundLimit": 2,
+        "monthlyInboundPercentage": 2,
+        "monthlyInboundResetAt": "2026-09-10T12:00:00.000Z",
+        "overLimitMessageCount": 2,
+        "billingLinked": false,
+        "annualAvailability": {
+          "developer": false,
+          "growth": false,
+          "scale": false
+        },
+        "trial": {
+          "isTrialUser": false,
+          "active": false,
+          "expired": false,
+          "exhausted": false,
+          "sendsUsed": 2,
+          "sendsRemaining": 2,
+          "sendCap": 2,
+          "receivesUsed": 2,
+          "receivesRemaining": 2,
+          "receiveCap": 2,
+          "expiresAt": "2026-09-10T12:00:00.000Z",
+          "startedAt": "2026-09-10T12:00:00.000Z",
+          "resetsAt": "2026-09-10T12:00:00.000Z"
+        }
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "deleteAccount",
+    "method": "DELETE",
+    "request_path": "/account",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "confirm": "DELETE"
+    },
+    "upload": false,
+    "response": {
+      "deleted": true
+    },
+    "status": 200
+  },
+  {
+    "id": "sendWelcomeEmail",
+    "method": "POST",
+    "request_path": "/account/welcome",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "ok": true
+    },
+    "status": 200
+  },
+  {
+    "id": "setPostVerifyTarget",
+    "method": "POST",
+    "request_path": "/account/post-verify-target",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "target": "/dashboard?verified=true"
+    },
+    "status": 200
+  },
+  {
+    "id": "listApiKeys",
+    "method": "GET",
+    "request_path": "/api-keys",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "keys": [
+        {
+          "id": "sample-id",
+          "name": "sample-name",
+          "prefix": "sample-prefix",
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "enabled": false
+        }
+      ]
+    },
+    "status": 200
+  },
+  {
+    "id": "createApiKey",
+    "method": "POST",
+    "request_path": "/api-keys",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "name": "sample-name",
+      "mailboxIds": [
+        "11111111-2222-4333-8444-555555555555"
+      ]
+    },
+    "upload": false,
+    "response": {
+      "key": "sample-key",
+      "prefix": "sample-prefix",
+      "scoped": false
+    },
+    "status": 201
+  },
+  {
+    "id": "revokeApiKey",
+    "method": "DELETE",
+    "request_path": "/api-keys/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "revoked": true
+    },
+    "status": 200
+  },
+  {
+    "id": "listMailboxes",
+    "method": "GET",
+    "request_path": "/mailboxes",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "mailboxes": [
+        {
+          "id": "11111111-2222-4333-8444-555555555555",
+          "userId": "sample-userId",
+          "domainId": "11111111-2222-4333-8444-555555555555",
+          "address": "sample-address",
+          "fullAddress": "fixture@example.com",
+          "displayName": "sample-displayName",
+          "dailySendCount": 2,
+          "dailySendLimit": 2,
+          "monthlySendCount": 2,
+          "monthlySendLimit": 2,
+          "status": "ACTIVE",
+          "pausedByBilling": false,
+          "stalwartProvisioned": false,
+          "suspendedAt": "2026-09-10T12:00:00.000Z",
+          "suspendedReason": "sample-suspendedReason",
+          "suspensionIncidentId": "sample-suspensionIncidentId",
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-10T12:00:00.000Z",
+          "receivedThisMonth": 2
+        }
+      ]
+    },
+    "status": 200
+  },
+  {
+    "id": "createMailbox",
+    "method": "POST",
+    "request_path": "/mailboxes",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "address": "sample-address",
+      "domainId": "11111111-2222-4333-8444-555555555555",
+      "displayName": "sample-displayName"
+    },
+    "upload": false,
+    "response": {
+      "mailbox": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "domainId": "11111111-2222-4333-8444-555555555555",
+        "address": "sample-address",
+        "fullAddress": "fixture@example.com",
+        "displayName": "sample-displayName",
+        "dailySendCount": 2,
+        "dailySendLimit": 2,
+        "monthlySendCount": 2,
+        "monthlySendLimit": 2,
+        "status": "ACTIVE",
+        "pausedByBilling": false,
+        "stalwartProvisioned": false,
+        "suspendedAt": "2026-09-10T12:00:00.000Z",
+        "suspendedReason": "sample-suspendedReason",
+        "suspensionIncidentId": "sample-suspensionIncidentId",
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z",
+        "receivedThisMonth": 2
+      }
+    },
+    "status": 201
+  },
+  {
+    "id": "getMailbox",
+    "method": "GET",
+    "request_path": "/mailboxes/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "mailbox": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "domainId": "11111111-2222-4333-8444-555555555555",
+        "address": "sample-address",
+        "fullAddress": "fixture@example.com",
+        "displayName": "sample-displayName",
+        "dailySendCount": 2,
+        "dailySendLimit": 2,
+        "monthlySendCount": 2,
+        "monthlySendLimit": 2,
+        "status": "ACTIVE",
+        "pausedByBilling": false,
+        "stalwartProvisioned": false,
+        "suspendedAt": "2026-09-10T12:00:00.000Z",
+        "suspendedReason": "sample-suspendedReason",
+        "suspensionIncidentId": "sample-suspensionIncidentId",
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z",
+        "receivedThisMonth": 2
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "updateMailbox",
+    "method": "PATCH",
+    "request_path": "/mailboxes/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "displayName": "sample-displayName",
+      "status": "ACTIVE"
+    },
+    "upload": false,
+    "response": {
+      "mailbox": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "domainId": "11111111-2222-4333-8444-555555555555",
+        "address": "sample-address",
+        "fullAddress": "fixture@example.com",
+        "displayName": "sample-displayName",
+        "dailySendCount": 2,
+        "dailySendLimit": 2,
+        "monthlySendCount": 2,
+        "monthlySendLimit": 2,
+        "status": "ACTIVE",
+        "pausedByBilling": false,
+        "stalwartProvisioned": false,
+        "suspendedAt": "2026-09-10T12:00:00.000Z",
+        "suspendedReason": "sample-suspendedReason",
+        "suspensionIncidentId": "sample-suspensionIncidentId",
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z",
+        "receivedThisMonth": 2
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "deleteMailbox",
+    "method": "DELETE",
+    "request_path": "/mailboxes/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "deleted": true
+    },
+    "status": 200
+  },
+  {
+    "id": "listMessages",
+    "method": "GET",
+    "request_path": "/mailboxes/box%20%2F%3F%23%25/messages",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {
+      "direction": "INBOUND",
+      "threadId": "11111111-2222-4333-8444-555555555555",
+      "since": "2026-09-10T12:00:00.000Z",
+      "limit": 2,
+      "offset": 2
+    },
+    "query": {
+      "direction": "INBOUND",
+      "threadId": "11111111-2222-4333-8444-555555555555",
+      "since": "2026-09-10T12:00:00.000Z",
+      "limit": 2,
+      "offset": 2
+    },
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "messages": [
+        {
+          "id": "11111111-2222-4333-8444-555555555555",
+          "mailboxId": "11111111-2222-4333-8444-555555555555",
+          "direction": "INBOUND",
+          "messageId": "sample-messageId",
+          "inReplyTo": "sample-inReplyTo",
+          "threadId": "11111111-2222-4333-8444-555555555555",
+          "fromAddress": "sample-fromAddress",
+          "toAddresses": [
+            "sample-toAddresses"
+          ],
+          "ccAddresses": [
+            "sample-ccAddresses"
+          ],
+          "subject": "sample-subject",
+          "bodyText": "sample-bodyText",
+          "bodyHtml": "sample-bodyHtml",
+          "headers": {},
+          "status": "QUEUED",
+          "externalMessageId": "sample-externalMessageId",
+          "hasAttachments": false,
+          "attachmentsDropped": false,
+          "attachmentsDroppedReason": "sample-attachmentsDroppedReason",
+          "eventDispatchedAt": "2026-09-10T12:00:00.000Z",
+          "overLimit": false,
+          "overLimitReason": "MONTHLY",
+          "pendingSseEventData": null,
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "attachments": [
+            {
+              "id": "11111111-2222-4333-8444-555555555555",
+              "messageId": "11111111-2222-4333-8444-555555555555",
+              "userId": "sample-userId",
+              "filename": "sample-filename",
+              "contentType": "sample-contentType",
+              "sizeBytes": 2,
+              "r2Key": "sample-r2Key",
+              "contentId": "sample-contentId",
+              "createdAt": "2026-09-10T12:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "metadata": {
+        "overLimitCount": 2,
+        "upgrade": {
+          "browserUrl": "https://example.com/fixture",
+          "apiEndpoint": {
+            "method": "POST",
+            "path": "/v1/billing/upgrade"
+          },
+          "hint": "sample-hint"
+        },
+        "limitHint": {
+          "current": 2,
+          "limit": 2,
+          "percentage": 2,
+          "reset_date": "2026-09-10T12:00:00.000Z",
+          "status": "healthy"
+        }
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "sendMessage",
+    "method": "POST",
+    "request_path": "/mailboxes/box%20%2F%3F%23%25/messages",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "to": [
+        "fixture@example.com"
+      ],
+      "cc": [
+        "fixture@example.com"
+      ],
+      "subject": "sample-subject",
+      "bodyText": "sample-bodyText",
+      "bodyHtml": "sample-bodyHtml",
+      "inReplyTo": "sample-inReplyTo",
+      "attachments": [
+        "11111111-2222-4333-8444-555555555555"
+      ],
+      "headers": {
+        "sample": "value"
+      }
+    },
+    "upload": false,
+    "response": {
+      "message": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "mailboxId": "11111111-2222-4333-8444-555555555555",
+        "direction": "INBOUND",
+        "messageId": "sample-messageId",
+        "inReplyTo": "sample-inReplyTo",
+        "threadId": "11111111-2222-4333-8444-555555555555",
+        "fromAddress": "sample-fromAddress",
+        "toAddresses": [
+          "sample-toAddresses"
+        ],
+        "ccAddresses": [
+          "sample-ccAddresses"
+        ],
+        "subject": "sample-subject",
+        "bodyText": "sample-bodyText",
+        "bodyHtml": "sample-bodyHtml",
+        "headers": {},
+        "status": "QUEUED",
+        "externalMessageId": "sample-externalMessageId",
+        "hasAttachments": false,
+        "attachmentsDropped": false,
+        "attachmentsDroppedReason": "sample-attachmentsDroppedReason",
+        "eventDispatchedAt": "2026-09-10T12:00:00.000Z",
+        "overLimit": false,
+        "overLimitReason": "MONTHLY",
+        "pendingSseEventData": null,
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "attachments": [
+          {
+            "id": "11111111-2222-4333-8444-555555555555",
+            "messageId": "11111111-2222-4333-8444-555555555555",
+            "userId": "sample-userId",
+            "filename": "sample-filename",
+            "contentType": "sample-contentType",
+            "sizeBytes": 2,
+            "r2Key": "sample-r2Key",
+            "contentId": "sample-contentId",
+            "createdAt": "2026-09-10T12:00:00.000Z"
+          }
+        ]
+      }
+    },
+    "status": 201
+  },
+  {
+    "id": "getMessage",
+    "method": "GET",
+    "request_path": "/mailboxes/box%20%2F%3F%23%25/messages/child%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%",
+      "child /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "message": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "mailboxId": "11111111-2222-4333-8444-555555555555",
+        "direction": "INBOUND",
+        "messageId": "sample-messageId",
+        "inReplyTo": "sample-inReplyTo",
+        "threadId": "11111111-2222-4333-8444-555555555555",
+        "fromAddress": "sample-fromAddress",
+        "toAddresses": [
+          "sample-toAddresses"
+        ],
+        "ccAddresses": [
+          "sample-ccAddresses"
+        ],
+        "subject": "sample-subject",
+        "bodyText": "sample-bodyText",
+        "bodyHtml": "sample-bodyHtml",
+        "headers": {},
+        "status": "QUEUED",
+        "externalMessageId": "sample-externalMessageId",
+        "hasAttachments": false,
+        "attachmentsDropped": false,
+        "attachmentsDroppedReason": "sample-attachmentsDroppedReason",
+        "eventDispatchedAt": "2026-09-10T12:00:00.000Z",
+        "overLimit": false,
+        "overLimitReason": "MONTHLY",
+        "pendingSseEventData": null,
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "attachments": [
+          {
+            "id": "11111111-2222-4333-8444-555555555555",
+            "messageId": "11111111-2222-4333-8444-555555555555",
+            "userId": "sample-userId",
+            "filename": "sample-filename",
+            "contentType": "sample-contentType",
+            "sizeBytes": 2,
+            "r2Key": "sample-r2Key",
+            "contentId": "sample-contentId",
+            "createdAt": "2026-09-10T12:00:00.000Z"
+          }
+        ]
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "listThreads",
+    "method": "GET",
+    "request_path": "/mailboxes/box%20%2F%3F%23%25/threads",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "threads": [
+        {
+          "id": "11111111-2222-4333-8444-555555555555",
+          "mailboxId": "11111111-2222-4333-8444-555555555555",
+          "subject": "sample-subject",
+          "messageCount": 2,
+          "lastMessageAt": "2026-09-10T12:00:00.000Z",
+          "participants": [
+            "sample-participants"
+          ],
+          "createdAt": "2026-09-10T12:00:00.000Z"
+        }
+      ],
+      "metadata": {
+        "overLimitCount": 2,
+        "upgrade": {
+          "browserUrl": "https://example.com/fixture",
+          "apiEndpoint": {
+            "method": "POST",
+            "path": "/v1/billing/upgrade"
+          },
+          "hint": "sample-hint"
+        },
+        "limitHint": {
+          "current": 2,
+          "limit": 2,
+          "percentage": 2,
+          "reset_date": "2026-09-10T12:00:00.000Z",
+          "status": "healthy"
+        }
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "getThread",
+    "method": "GET",
+    "request_path": "/mailboxes/box%20%2F%3F%23%25/threads/child%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%",
+      "child /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "thread": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "mailboxId": "11111111-2222-4333-8444-555555555555",
+        "subject": "sample-subject",
+        "messageCount": 2,
+        "lastMessageAt": "2026-09-10T12:00:00.000Z",
+        "participants": [
+          "sample-participants"
+        ],
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "messages": [
+          {
+            "id": "11111111-2222-4333-8444-555555555555",
+            "mailboxId": "11111111-2222-4333-8444-555555555555",
+            "direction": "INBOUND",
+            "messageId": "sample-messageId",
+            "inReplyTo": "sample-inReplyTo",
+            "threadId": "11111111-2222-4333-8444-555555555555",
+            "fromAddress": "sample-fromAddress",
+            "toAddresses": [
+              "sample-toAddresses"
+            ],
+            "ccAddresses": [
+              "sample-ccAddresses"
+            ],
+            "subject": "sample-subject",
+            "bodyText": "sample-bodyText",
+            "bodyHtml": "sample-bodyHtml",
+            "headers": {},
+            "status": "QUEUED",
+            "externalMessageId": "sample-externalMessageId",
+            "hasAttachments": false,
+            "attachmentsDropped": false,
+            "attachmentsDroppedReason": "sample-attachmentsDroppedReason",
+            "eventDispatchedAt": "2026-09-10T12:00:00.000Z",
+            "overLimit": false,
+            "overLimitReason": "MONTHLY",
+            "pendingSseEventData": null,
+            "createdAt": "2026-09-10T12:00:00.000Z",
+            "attachments": [
+              {
+                "id": "11111111-2222-4333-8444-555555555555",
+                "messageId": "11111111-2222-4333-8444-555555555555",
+                "userId": "sample-userId",
+                "filename": "sample-filename",
+                "contentType": "sample-contentType",
+                "sizeBytes": 2,
+                "r2Key": "sample-r2Key",
+                "contentId": "sample-contentId",
+                "createdAt": "2026-09-10T12:00:00.000Z"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "uploadAttachment",
+    "method": "POST",
+    "request_path": "/attachments",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": true,
+    "response": {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "filename": "sample-filename",
+      "sizeBytes": 2
+    },
+    "status": 201
+  },
+  {
+    "id": "downloadAttachment",
+    "method": "GET",
+    "request_path": "/attachments/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "messageId": "11111111-2222-4333-8444-555555555555",
+      "userId": "sample-userId",
+      "filename": "sample-filename",
+      "contentType": "sample-contentType",
+      "sizeBytes": 2,
+      "r2Key": "sample-r2Key",
+      "contentId": "sample-contentId",
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "url": "https://example.com/fixture"
+    },
+    "status": 200
+  },
+  {
+    "id": "deleteAttachment",
+    "method": "DELETE",
+    "request_path": "/attachments/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "deleted": true
+    },
+    "status": 200
+  },
+  {
+    "id": "listDomains",
+    "method": "GET",
+    "request_path": "/domains",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "domains": [
+        {
+          "id": "11111111-2222-4333-8444-555555555555",
+          "userId": "sample-userId",
+          "domain": "sample-domain",
+          "status": "PENDING_VERIFICATION",
+          "mxVerified": false,
+          "spfVerified": false,
+          "dkimVerified": false,
+          "dmarcVerified": false,
+          "dkimPublicKey": "sample-dkimPublicKey",
+          "dkimSelector": "sample-dkimSelector",
+          "externalDomainId": "sample-externalDomainId",
+          "stalwartProvisioned": false,
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-10T12:00:00.000Z"
+        }
+      ]
+    },
+    "status": 200
+  },
+  {
+    "id": "createDomain",
+    "method": "POST",
+    "request_path": "/domains",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "domain": "sample-domain"
+    },
+    "upload": false,
+    "response": {
+      "domain": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "domain": "sample-domain",
+        "status": "PENDING_VERIFICATION",
+        "mxVerified": false,
+        "spfVerified": false,
+        "dkimVerified": false,
+        "dmarcVerified": false,
+        "dkimPublicKey": "sample-dkimPublicKey",
+        "dkimSelector": "sample-dkimSelector",
+        "externalDomainId": "sample-externalDomainId",
+        "stalwartProvisioned": false,
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z"
+      },
+      "dnsRecords": {
+        "mx": {
+          "type": "MX",
+          "host": "sample-host",
+          "value": "sample-value",
+          "priority": 2
+        },
+        "sendMx": {
+          "type": "MX",
+          "host": "sample-host",
+          "value": "sample-value",
+          "priority": 2
+        },
+        "spf": {
+          "type": "TXT",
+          "host": "sample-host",
+          "value": "sample-value"
+        },
+        "dkim": [
+          {
+            "type": "CNAME",
+            "host": "sample-host",
+            "value": "sample-value"
+          }
+        ],
+        "dmarc": {
+          "type": "TXT",
+          "host": "sample-host",
+          "value": "sample-value"
+        }
+      }
+    },
+    "status": 201
+  },
+  {
+    "id": "getDomain",
+    "method": "GET",
+    "request_path": "/domains/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "domain": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "domain": "sample-domain",
+        "status": "PENDING_VERIFICATION",
+        "mxVerified": false,
+        "spfVerified": false,
+        "dkimVerified": false,
+        "dmarcVerified": false,
+        "dkimPublicKey": "sample-dkimPublicKey",
+        "dkimSelector": "sample-dkimSelector",
+        "externalDomainId": "sample-externalDomainId",
+        "stalwartProvisioned": false,
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z"
+      },
+      "dnsRecords": {
+        "mx": {
+          "type": "MX",
+          "host": "sample-host",
+          "value": "sample-value",
+          "priority": 2
+        },
+        "sendMx": {
+          "type": "MX",
+          "host": "sample-host",
+          "value": "sample-value",
+          "priority": 2
+        },
+        "spf": {
+          "type": "TXT",
+          "host": "sample-host",
+          "value": "sample-value"
+        },
+        "dkim": [
+          {
+            "type": "CNAME",
+            "host": "sample-host",
+            "value": "sample-value"
+          }
+        ],
+        "dmarc": {
+          "type": "TXT",
+          "host": "sample-host",
+          "value": "sample-value"
+        }
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "deleteDomain",
+    "method": "DELETE",
+    "request_path": "/domains/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "deleted": true
+    },
+    "status": 200
+  },
+  {
+    "id": "verifyDomain",
+    "method": "POST",
+    "request_path": "/domains/box%20%2F%3F%23%25/verify",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "domain": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "domain": "sample-domain",
+        "status": "PENDING_VERIFICATION",
+        "mxVerified": false,
+        "spfVerified": false,
+        "dkimVerified": false,
+        "dmarcVerified": false,
+        "dkimPublicKey": "sample-dkimPublicKey",
+        "dkimSelector": "sample-dkimSelector",
+        "externalDomainId": "sample-externalDomainId",
+        "stalwartProvisioned": false,
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z"
+      },
+      "verification": {
+        "mx": false,
+        "spf": false,
+        "dkim": false,
+        "dmarc": false,
+        "allVerified": false
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "listWebhooks",
+    "method": "GET",
+    "request_path": "/webhooks",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "webhooks": [
+        {
+          "id": "11111111-2222-4333-8444-555555555555",
+          "userId": "sample-userId",
+          "mailboxId": "11111111-2222-4333-8444-555555555555",
+          "url": "https://example.com/fixture",
+          "events": [
+            "message.received"
+          ],
+          "headers": {
+            "sample": "value"
+          },
+          "status": "ACTIVE",
+          "failureCount": 2,
+          "lastTriggeredAt": "2026-09-10T12:00:00.000Z",
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-10T12:00:00.000Z"
+        }
+      ]
+    },
+    "status": 200
+  },
+  {
+    "id": "createWebhook",
+    "method": "POST",
+    "request_path": "/webhooks",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "url": "https://example.com/fixture",
+      "mailboxId": "11111111-2222-4333-8444-555555555555",
+      "events": [
+        "message.received"
+      ],
+      "headers": {
+        "sample": "value"
+      }
+    },
+    "upload": false,
+    "response": {
+      "webhook": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "mailboxId": "11111111-2222-4333-8444-555555555555",
+        "url": "https://example.com/fixture",
+        "events": [
+          "message.received"
+        ],
+        "headers": {
+          "sample": "value"
+        },
+        "status": "ACTIVE",
+        "failureCount": 2,
+        "lastTriggeredAt": "2026-09-10T12:00:00.000Z",
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z",
+        "secret": "sample-secret"
+      }
+    },
+    "status": 201
+  },
+  {
+    "id": "getWebhook",
+    "method": "GET",
+    "request_path": "/webhooks/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "webhook": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "mailboxId": "11111111-2222-4333-8444-555555555555",
+        "url": "https://example.com/fixture",
+        "events": [
+          "message.received"
+        ],
+        "headers": {
+          "sample": "value"
+        },
+        "status": "ACTIVE",
+        "failureCount": 2,
+        "lastTriggeredAt": "2026-09-10T12:00:00.000Z",
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z"
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "updateWebhook",
+    "method": "PATCH",
+    "request_path": "/webhooks/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "url": "https://example.com/fixture",
+      "events": [
+        "message.received"
+      ],
+      "status": "ACTIVE",
+      "headers": null
+    },
+    "upload": false,
+    "response": {
+      "webhook": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "userId": "sample-userId",
+        "mailboxId": "11111111-2222-4333-8444-555555555555",
+        "url": "https://example.com/fixture",
+        "events": [
+          "message.received"
+        ],
+        "headers": {
+          "sample": "value"
+        },
+        "status": "ACTIVE",
+        "failureCount": 2,
+        "lastTriggeredAt": "2026-09-10T12:00:00.000Z",
+        "createdAt": "2026-09-10T12:00:00.000Z",
+        "updatedAt": "2026-09-10T12:00:00.000Z"
+      }
+    },
+    "status": 200
+  },
+  {
+    "id": "deleteWebhook",
+    "method": "DELETE",
+    "request_path": "/webhooks/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "deleted": true
+    },
+    "status": 200
+  },
+  {
+    "id": "listWebhookDeliveries",
+    "method": "GET",
+    "request_path": "/webhooks/box%20%2F%3F%23%25/deliveries",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "deliveries": [
+        {
+          "id": "11111111-2222-4333-8444-555555555555",
+          "event": "sample-event",
+          "responseStatus": 2,
+          "status": "PENDING",
+          "attempts": 2,
+          "nextRetryAt": "2026-09-10T12:00:00.000Z",
+          "createdAt": "2026-09-10T12:00:00.000Z"
+        }
+      ]
+    },
+    "status": 200
+  },
+  {
+    "id": "streamEvents",
+    "method": "GET",
+    "request_path": "/events",
+    "paths": [],
+    "params": {
+      "mailboxId": "sample-mailboxId",
+      "events": "sample-events",
+      "Last-Event-ID": "sample-Last-Event-ID"
+    },
+    "query": {
+      "mailboxId": "sample-mailboxId",
+      "events": "sample-events"
+    },
+    "headers": {
+      "Last-Event-ID": "sample-Last-Event-ID"
+    },
+    "body": null,
+    "upload": false,
+    "response": null,
+    "status": 200
+  },
+  {
+    "id": "listSuppressions",
+    "method": "GET",
+    "request_path": "/suppressions",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "suppressions": [
+        {
+          "id": "11111111-2222-4333-8444-555555555555",
+          "email": "fixture@example.com",
+          "reason": "BOUNCE",
+          "createdAt": "2026-09-10T12:00:00.000Z"
+        }
+      ]
+    },
+    "status": 200
+  },
+  {
+    "id": "createSuppression",
+    "method": "POST",
+    "request_path": "/suppressions",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "email": "fixture@example.com",
+      "reason": "BOUNCE"
+    },
+    "upload": false,
+    "response": {
+      "suppression": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "email": "fixture@example.com",
+        "reason": "BOUNCE",
+        "createdAt": "2026-09-10T12:00:00.000Z"
+      }
+    },
+    "status": 201
+  },
+  {
+    "id": "deleteSuppression",
+    "method": "DELETE",
+    "request_path": "/suppressions/box%20%2F%3F%23%25",
+    "paths": [
+      "box /?#%"
+    ],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": null,
+    "upload": false,
+    "response": {
+      "deleted": true
+    },
+    "status": 200
+  },
+  {
+    "id": "createUpgradeCheckout",
+    "method": "POST",
+    "request_path": "/billing/upgrade",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "plan": "developer",
+      "period": "monthly"
+    },
+    "upload": false,
+    "response": {
+      "checkout_url": "https://example.com/fixture",
+      "expires_at": 2,
+      "message": "sample-message"
+    },
+    "status": 200
+  },
+  {
+    "id": "resendVerificationEmail",
+    "method": "POST",
+    "request_path": "/auth/resend-verification",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "email": "fixture@example.com"
+    },
+    "upload": false,
+    "response": {
+      "ok": true
+    },
+    "status": 200
+  },
+  {
+    "id": "submitSupportTicket",
+    "method": "POST",
+    "request_path": "/support",
+    "paths": [],
+    "params": {},
+    "query": {},
+    "headers": {},
+    "body": {
+      "category": "technical",
+      "subject": "sample-subject",
+      "message": "sample-message"
+    },
+    "upload": false,
+    "response": {
+      "ok": true
+    },
+    "status": 200
+  }
+]

@@ -1,0 +1,4815 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Robotomail API",
+    "version": "1.0.0",
+    "summary": "Email infrastructure for AI agents",
+    "description": "Robotomail provisions and manages real email mailboxes for AI agents. Agents create mailboxes, send and receive email, manage custom domains, subscribe to inbound webhooks, and read threads \u2014 entirely through this REST API.\n\n## Authentication\n\nAccount signup, slug availability, and verification-email resend are unauthenticated. All other documented endpoints authenticate with an API key passed as a bearer token:\n\n```\nAuthorization: Bearer <API_KEY>\n```\n\nKeys are created at signup (returned once in the response body) or via `POST /api-keys`. The signup key does nothing until a human verifies the signup email; verification enables the permanent Free plan: one mailbox, 10 sends and 10 receives per calendar month, only with the owner's verified email. Quotas are account-wide and renew at 00:00 UTC on the first of each month. Reaching one cap leaves the other direction and saved messages accessible. Sends above the cap return 402 TRIAL_SEND_LIMIT with resetsAt. Other inbound mail and mail above the receive cap are discarded, with no backlog on renewal. Upgrade for other correspondents or higher limits. Two key types exist:\n\n- **Full-access keys** \u2014 can perform account-level operations and upload attachments.\n- **Mailbox-scoped keys** \u2014 restricted to the mailboxes listed in their `mailboxIds` scope. Scoped keys can list, read, send, and mutate within scoped mailboxes; they can create mailbox-bound webhooks but cannot create account-wide webhooks. Give each agent its own scoped key so a compromise cannot touch other mailboxes.\n\n## Errors\n\nEvery route-produced error is JSON: `{ \"error\": string, ...context }`. Context fields vary by gate \u2014 payment gates include `payment_required: true`, `code`, and an `upgrade` object; inbound-limit gates identify the withheld resource and recovery mode. Unknown paths return a structured JSON 404 with `error`, `code`, `message`, and `resolution`, never HTML.\n\n## Quota headers\n\nAuthenticated JSON responses carry `X-Robotomail-Inbound-Quota: <count>/<limit>` plus, after a threshold is crossed, `X-Robotomail-Inbound-Warning` (`approaching|near|reached`). Inbound-limit 402 responses also carry `X-Robotomail-Retriable: false`; monthly-limit responses add `Retry-After` and `X-Robotomail-Reset-At`. Route-produced 429 responses do not emit `Retry-After`.\n\n## Webhooks & SSE\n\nInbound email arrives either via webhooks (`POST /webhooks`, HMAC-SHA256 signed with `X-Robotomail-Signature`) or server-sent events (`GET /events`).\n\n## More for agents\n\n- MCP and connectors: https://robotomail.com/docs/mcp (setup guide; discover MCP tool schemas via tools/list at https://robotomail.com/mcp)\n- OpenAPI spec: https://robotomail.com/openapi.json (this file)\n- Agent onboarding instructions: https://robotomail.com/skill.md\n- Machine-readable site map: https://robotomail.com/llms.txt\n- Docs index (markdown): https://robotomail.com/docs.md\n- CLI: https://www.npmjs.com/package/@robotomail/cli\n\n## Versioning and deprecation\n\nThe API is URL-versioned; the current version is `/v1`. Backwards-incompatible changes ship as a new version path, never in place; additive changes (new endpoints, new optional fields, new enum values documented as open) happen without a version bump. If an endpoint or version is retired, the deprecation is announced at least 30 days in advance in the changelog (https://robotomail.com/docs/changelog) and signalled with `Deprecation` and `Sunset` headers on affected responses.",
+    "termsOfService": "https://robotomail.com/terms",
+    "contact": {
+      "name": "Robotomail support",
+      "email": "support@robotomail.com",
+      "url": "https://robotomail.com/contact"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.robotomail.com/v1",
+      "description": "Primary API"
+    },
+    {
+      "url": "https://robotomail.com/v1",
+      "description": "Same API served from the main site"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Signup",
+      "description": "Account creation \u2014 no auth required"
+    },
+    {
+      "name": "Account",
+      "description": "Account state and lifecycle"
+    },
+    {
+      "name": "API Keys",
+      "description": "Key management, including mailbox-scoped keys"
+    },
+    {
+      "name": "Mailboxes",
+      "description": "Create and manage agent mailboxes"
+    },
+    {
+      "name": "Messages",
+      "description": "Send and read email"
+    },
+    {
+      "name": "Threads",
+      "description": "Conversation threading"
+    },
+    {
+      "name": "Attachments",
+      "description": "Upload and fetch attachments"
+    },
+    {
+      "name": "Domains",
+      "description": "Custom sending/receiving domains"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Inbound email event delivery"
+    },
+    {
+      "name": "Events",
+      "description": "Server-sent events stream"
+    },
+    {
+      "name": "Suppressions",
+      "description": "Blocked recipient addresses"
+    },
+    {
+      "name": "Billing",
+      "description": "Plan upgrades"
+    }
+  ],
+  "paths": {
+    "/signup": {
+      "post": {
+        "operationId": "createSignup",
+        "summary": "Create an account",
+        "description": "Creates a user, a default ACTIVE mailbox on the shared platform domain, and a default API key. The API key is returned once. A human must verify the signup email before the key works. Verification enables the permanent Free plan: one mailbox, 10 sends and 10 receives per calendar month, only with the owner's verified email. No card or expiry. Allowances renew on the first at 00:00 UTC. Mail-server provisioning continues asynchronously and is exposed through stalwartProvisioned. Rate limited per IP.",
+        "tags": [
+          "Signup"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              },
+              "examples": {
+                "agent-signup": {
+                  "value": {
+                    "email": "ops@example.com",
+                    "password": "correct-horse-battery-staple",
+                    "slug": "acme-agents",
+                    "name": "Acme"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created; api_key.key is shown exactly once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "description": "Email or slug already registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/signup/check-slug": {
+      "get": {
+        "operationId": "checkSlugAvailability",
+        "summary": "Check if an account slug is available",
+        "tags": [
+          "Signup"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3
+            },
+            "description": "Candidate account slug."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Availability result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlugAvailability"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "description": "Checks whether an account slug is free. The route only requires a value at least three characters long; reserved slugs return available false with reason reserved. Rate limited per IP (30/min). The slug is validated with the same format rules as signup (3-30 chars, lowercase alphanumerics and hyphens), so available:true implies signup will accept it; malformed slugs return 400."
+      }
+    },
+    "/account": {
+      "get": {
+        "operationId": "getAccount",
+        "summary": "Get account stats",
+        "description": "Returns plan, storage, mailbox counts, send/receive usage, inbound quota state, and billing linkage. Requires a full-access key or dashboard session.",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Account state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenScoped"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAccount",
+        "summary": "Delete account permanently",
+        "description": "Permanently deletes the account and all associated data. Requires a full-access key and the exact JSON confirmation body.",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "const": "DELETE"
+                  }
+                },
+                "required": [
+                  "confirm"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/welcome": {
+      "post": {
+        "operationId": "sendWelcomeEmail",
+        "summary": "Send the welcome email",
+        "description": "Enqueues an idempotent welcome-email job and returns once queued; it does not wait for delivery or directly mark onboarding progress. Requires a full-access key and a verified email.",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Welcome-email job enqueued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/account/post-verify-target": {
+      "post": {
+        "operationId": "setPostVerifyTarget",
+        "summary": "Resolve post-verification target",
+        "description": "Resolves the next browser target without a request body. It may enroll a legacy signup into restricted Free, persist an annual-to-monthly fallback, clear an unusable pending intent, and enqueue the generic welcome email for dashboard targets.",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved target.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "target": {
+                      "type": "string",
+                      "enum": [
+                        "/dashboard?verified=true",
+                        "/onboarding"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "target"
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api-keys": {
+      "get": {
+        "operationId": "listApiKeys",
+        "summary": "List API keys",
+        "description": "Lists the account's keys (prefix + metadata only; raw keys are never retrievable again). Requires full access.",
+        "tags": [
+          "API Keys"
+        ],
+        "responses": {
+          "200": {
+            "description": "Key list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyListResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenScoped"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createApiKey",
+        "summary": "Create an API key",
+        "description": "Creates a new key. Pass `mailboxIds` to mint a MAILBOX-SCOPED key that can only operate on those mailboxes \u2014 the recommended pattern for giving an agent least-privilege access. Omit `mailboxIds` for a full-access key. The raw key is returned once.\n\nScopes:\n- `mailboxIds: string[]` \u2014 restricts every mailbox-scoped endpoint to these IDs; blocks account-level operations (403).",
+        "tags": [
+          "API Keys"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              },
+              "examples": {
+                "scoped-agent-key": {
+                  "summary": "Scoped key for one agent mailbox",
+                  "value": {
+                    "name": "research-agent",
+                    "mailboxIds": [
+                      "a1b2c3d4-5678-4def-abcd-111111111111"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Key created; key is shown exactly once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateApiKeyResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api-keys/{id}": {
+      "delete": {
+        "operationId": "revokeApiKey",
+        "summary": "Revoke an API key",
+        "tags": [
+          "API Keys"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ApiKeyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Revoked"
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenScoped"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Disables an API key immediately. A bearer-authenticated healthy account cannot revoke its only active full-access key. Suspended accounts and inert payment bailers may still revoke keys."
+      }
+    },
+    "/mailboxes": {
+      "get": {
+        "operationId": "listMailboxes",
+        "summary": "List mailboxes",
+        "description": "Lists mailboxes visible to the caller. A mailbox-scoped key sees only its scoped mailboxes. Each row includes `receivedThisMonth`.",
+        "tags": [
+          "Mailboxes"
+        ],
+        "responses": {
+          "200": {
+            "description": "Mailbox list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailboxListResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createMailbox",
+        "summary": "Create a mailbox",
+        "description": "Creates an ACTIVE mailbox on the shared platform domain or on a verified custom domain. Mail-server provisioning is asynchronous; stalwartProvisioned, not status, reports whether it has completed. Requires a full-access key and is subject to mailbox and custom-domain plan limits. A domainId that you own but that is not yet VERIFIED returns 400 {\"error\": \"Domain not verified\"} (distinct from schema validation).",
+        "tags": [
+          "Mailboxes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMailboxRequest"
+              },
+              "examples": {
+                "platform-domain": {
+                  "value": {
+                    "address": "support.agent",
+                    "displayName": "Support Agent"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mailbox created ACTIVE; provisioning may still be pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailboxResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenWithPlan"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/mailboxes/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MailboxId"
+        }
+      ],
+      "get": {
+        "operationId": "getMailbox",
+        "summary": "Get a mailbox",
+        "tags": [
+          "Mailboxes"
+        ],
+        "responses": {
+          "200": {
+            "description": "Mailbox.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailboxResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Fetches one mailbox by ID. Scoped keys can only read mailboxes in their scope; other IDs return 404."
+      },
+      "patch": {
+        "operationId": "updateMailbox",
+        "summary": "Update a mailbox",
+        "description": "Updates displayName and/or status. Scoped keys may update an in-scope mailbox. Reactivating a paused mailbox is subject to mailbox and custom-domain plan limits; suspended mailboxes cannot be reactivated through this route.",
+        "tags": [
+          "Mailboxes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMailboxRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated mailbox.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailboxResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenWithPlan"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMailbox",
+        "summary": "Delete a mailbox",
+        "tags": [
+          "Mailboxes"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Permanently deletes the mailbox and its messages. Requires full access."
+      }
+    },
+    "/mailboxes/{id}/messages": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MailboxId"
+        }
+      ],
+      "get": {
+        "operationId": "listMessages",
+        "summary": "List messages in a mailbox",
+        "description": "Lists messages newest-first with pagination and filters. Over-quota inbound messages are excluded from the list but counted in `metadata.overLimitCount`.",
+        "tags": [
+          "Messages"
+        ],
+        "parameters": [
+          {
+            "name": "direction",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "INBOUND",
+                "OUTBOUND"
+              ]
+            },
+            "description": "Filter by direction."
+          },
+          {
+            "name": "threadId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Only messages in this thread."
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Only messages created at or after this ISO-8601 timestamp."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible message page and inbound-limit metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageListResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "operationId": "sendMessage",
+        "summary": "Send an email from a mailbox",
+        "description": "Sends synchronously through the outbound provider and returns the persisted message with status SENT after provider acceptance and bookkeeping complete. inReplyTo threads a reply. Daily/monthly, velocity, verification, suppression, trial, and attachment-scope gates apply. Besides schema validation, 400 is also returned (body {\"error\": \"...\"}) when the mailbox is not ACTIVE, a recipient is rejected as disposable/test-domain or is on the suppression list, an attachment ID is not found, or the provider rejects the addresses/attachments.",
+        "tags": [
+          "Messages"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              },
+              "examples": {
+                "reply": {
+                  "value": {
+                    "to": [
+                      "customer@example.com"
+                    ],
+                    "subject": "Re: Order #1234",
+                    "bodyText": "Your order shipped today.",
+                    "inReplyTo": "<orig-1234@example.com>"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Message sent synchronously with status SENT.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/AuthenticatedRateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/AuthenticatedServerError"
+          }
+        }
+      }
+    },
+    "/mailboxes/{id}/messages/{msgId}": {
+      "get": {
+        "operationId": "getMessage",
+        "summary": "Get a message",
+        "description": "Fetches a single message with attachments. If the message is withheld by an inbound limit gate, returns 402 with `code: INBOUND_LIMIT_EXCEEDED` (monthly \u2014 unlocks at `resetAt`) or `INBOUND_TRIAL_LIMIT_EXCEEDED` (upgrade-only recovery).",
+        "tags": [
+          "Messages"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MailboxId"
+          },
+          {
+            "name": "msgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Message resource ID."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message with attachments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentOrInboundLimit"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/mailboxes/{id}/threads": {
+      "get": {
+        "operationId": "listThreads",
+        "summary": "List threads in a mailbox",
+        "tags": [
+          "Threads"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MailboxId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Up to 50 visible threads and inbound-limit metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadListResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Returns at most 50 threads, newest visible activity first, with no pagination. Threads containing only over-limit messages are omitted, and counts and lastMessageAt reflect visible messages only."
+      }
+    },
+    "/mailboxes/{id}/threads/{tid}": {
+      "get": {
+        "operationId": "getThread",
+        "summary": "Get a thread with its messages",
+        "tags": [
+          "Threads"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MailboxId"
+          },
+          {
+            "name": "tid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Thread resource ID."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thread with visible messages.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Fetches visible messages in chronological order. Over-limit messages are excluded; messageCount and lastMessageAt are recomputed from visible rows. Returns 404 when the thread does not exist or every message is withheld."
+      }
+    },
+    "/attachments": {
+      "post": {
+        "operationId": "uploadAttachment",
+        "summary": "Upload an attachment",
+        "description": "Uploads one multipart/form-data file under the file field. The maximum file size is 25 MB; oversized files or storage-quota failures return 413. Requires a full-access key.",
+        "tags": [
+          "Attachments"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File to upload, maximum 25 MB."
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attachment stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentUploadResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          }
+        }
+      }
+    },
+    "/attachments/{id}": {
+      "get": {
+        "operationId": "downloadAttachment",
+        "summary": "Get an attachment download URL",
+        "description": "Returns JSON attachment metadata plus a presigned url; it does not stream file bytes. Scoped keys can fetch an attachment only when it is linked to a message in scope. Withheld inbound attachments return an inbound-limit 402.",
+        "tags": [
+          "Attachments"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AttachmentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attachment metadata and presigned URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentDownload"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentOrInboundLimit"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAttachment",
+        "summary": "Delete an attachment",
+        "tags": [
+          "Attachments"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AttachmentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Deletes an attachment and decrements account storage. Scoped keys may delete it only when linked to a message in scope; unlinked uploads require a full-access key."
+      }
+    },
+    "/domains": {
+      "get": {
+        "operationId": "listDomains",
+        "summary": "List custom domains",
+        "tags": [
+          "Domains"
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainListResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "description": "Lists raw domain rows without dkimPrivateKey. Other provider and provisioning fields returned by Prisma are included."
+      },
+      "post": {
+        "operationId": "createDomain",
+        "summary": "Add a custom domain",
+        "description": "Registers a custom domain and returns a dnsRecords object keyed by mx, sendMx, spf, dkim, and dmarc. The domain row is returned without dkimPrivateKey. Requires verified email, full access, and available custom-domain plan capacity.",
+        "tags": [
+          "Domains"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDomainRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Domain and DNS records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainCreatedResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenWithPlan"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/domains/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DomainId"
+        }
+      ],
+      "get": {
+        "operationId": "getDomain",
+        "summary": "Get a domain and its DNS records",
+        "tags": [
+          "Domains"
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain and nullable DNS records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Returns the raw domain row without dkimPrivateKey plus dnsRecords. dnsRecords is null when no serialized DKIM record set is stored."
+      },
+      "delete": {
+        "operationId": "deleteDomain",
+        "summary": "Delete a domain",
+        "tags": [
+          "Domains"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Removes a custom domain from the account."
+      }
+    },
+    "/domains/{id}/verify": {
+      "post": {
+        "operationId": "verifyDomain",
+        "summary": "Trigger domain verification",
+        "description": "Runs DNS checks, advances but does not regress verification flags, and asks the sending provider to verify when DNS is ready. Returns domain plus verification booleans.",
+        "tags": [
+          "Domains"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DomainId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain and verification result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainVerificationResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "operationId": "listWebhooks",
+        "summary": "List webhooks",
+        "description": "Secrets and header values are redacted in list responses. Mailbox-scoped keys see only webhooks bound to a scoped mailbox.",
+        "tags": [
+          "Webhooks"
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook list with secret omitted and header values masked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookListResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createWebhook",
+        "summary": "Create a webhook",
+        "description": "Subscribes an HTTPS endpoint and reveals the signing secret once. Full-access keys may omit mailboxId for an account-wide webhook. Mailbox-scoped keys may create a webhook when mailboxId is present and in scope; omitting it returns 400 Scoped keys must specify a mailboxId. Trial onboarding keys are forbidden.",
+        "tags": [
+          "Webhooks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook created with secret and unmasked custom headers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookCreatedResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/webhooks/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/WebhookId"
+        }
+      ],
+      "get": {
+        "operationId": "getWebhook",
+        "summary": "Get a webhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook with secret omitted and header values masked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Fetches one webhook. Secrets stay redacted; header values are masked outside create/update responses."
+      },
+      "patch": {
+        "operationId": "updateWebhook",
+        "summary": "Update a webhook",
+        "description": "Changes URL, events, status, or custom headers and returns unmasked headers. Trial onboarding keys are forbidden. Scoped keys may update only mailbox-bound webhooks in scope.",
+        "tags": [
+          "Webhooks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated webhook with unmasked custom headers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteWebhook",
+        "summary": "Delete a webhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Deletes an owned webhook. Suspended accounts and payment bailers may use this wind-down route. Scoped keys may delete only mailbox-bound webhooks in scope."
+      }
+    },
+    "/webhooks/{id}/deliveries": {
+      "get": {
+        "operationId": "listWebhookDeliveries",
+        "summary": "List webhook deliveries",
+        "description": "Returns the 20 most recent delivery attempts with no pagination. Each row contains only id, event, responseStatus, status, attempts, nextRetryAt, and createdAt; payload and response bodies are intentionally omitted.",
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "At most 20 delivery rows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeliveryListResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "streamEvents",
+        "summary": "Stream inbox events over SSE",
+        "description": "Server-sent events stream for live and replayed account activity. Optionally filters by mailboxId and a comma-separated events list; Last-Event-ID requests replay before live events. Scoped keys are limited to their mailbox set, trial onboarding keys are forbidden, and each user is limited to five concurrent streams. Wire protocol: each frame is `id: <eventId>`, `event: <name>`, `data: <JSON {event, timestamp, data}>`; a `: heartbeat` comment is sent every 30 seconds; after about 4.5 minutes the server sends `event: reconnect` with `data: {}` and closes, so clients must reconnect with `Last-Event-ID` (replay covers at most the last 100 events within 1 hour). The response carries `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`.",
+        "tags": [
+          "Events"
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream. Unlike JSON responses, the stream response does not carry inbound-quota headers.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/AuthenticatedRateLimited"
+          }
+        },
+        "parameters": [
+          {
+            "name": "mailboxId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mailbox filter. Scoped keys must include this ID in their scope."
+          },
+          {
+            "name": "events",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated event names: message.received, message.sent, message.delivered, message.bounced, message.complaint."
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Replay events after this SSE event ID before switching to live delivery."
+          }
+        ]
+      }
+    },
+    "/suppressions": {
+      "get": {
+        "operationId": "listSuppressions",
+        "summary": "List suppressed addresses",
+        "description": "Addresses that will never receive email from your account (bounces, complaints, manual entries).",
+        "tags": [
+          "Suppressions"
+        ],
+        "responses": {
+          "200": {
+            "description": "Suppression list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuppressionListResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSuppression",
+        "summary": "Suppress an address",
+        "tags": [
+          "Suppressions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSuppressionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Suppression entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuppressionResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        },
+        "description": "Adds an email address to the suppression list. A valid email is normalized to lowercase; reason defaults to MANUAL. Requires a verified email and full-access key."
+      }
+    },
+    "/suppressions/{id}": {
+      "delete": {
+        "operationId": "deleteSuppression",
+        "summary": "Remove a suppression entry",
+        "tags": [
+          "Suppressions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Suppression entry ID."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Removes an address from the suppression list, allowing future sends to it."
+      }
+    },
+    "/billing/upgrade": {
+      "post": {
+        "operationId": "createUpgradeCheckout",
+        "summary": "Start a plan upgrade",
+        "description": "Returns a hosted checkout URL using snake_case checkout_url and expires_at. An empty body is allowed and defaults to Developer monthly. A matching open checkout is reused with status 200; a newly created checkout returns 201. The human account owner must complete checkout in a browser.",
+        "tags": [
+          "Billing"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpgradeRequest"
+              },
+              "examples": {
+                "developer-monthly": {
+                  "value": {
+                    "plan": "developer",
+                    "period": "monthly"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching open checkout session reused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpgradeCheckoutResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "201": {
+            "description": "New checkout session created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpgradeCheckoutResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/AuthenticatedServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "operationId": "resendVerificationEmail",
+        "summary": "Resend the email verification link",
+        "tags": [
+          "Signup"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted; identical for unknown and already verified addresses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "description": "Re-sends the verification email to the given address. The response is identical whether or not the address has an account (no enumeration)."
+      }
+    },
+    "/support": {
+      "post": {
+        "operationId": "submitSupportTicket",
+        "summary": "Contact support",
+        "description": "Sends a support message from the authenticated account. Available even while suspended.",
+        "tags": [
+          "Account"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Support request submitted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            },
+            "headers": {
+              "X-Robotomail-Inbound-Quota": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+              },
+              "X-Robotomail-Inbound-Warning": {
+                "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthenticatedBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenScoped"
+          },
+          "500": {
+            "$ref": "#/components/responses/AuthenticatedServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key as bearer token: Authorization: Bearer rm_.... Create keys via POST /api-keys or at signup. A key created with mailboxIds is restricted to those mailboxes. Scoped keys can read, send, update scoped mailboxes, fetch or delete attachments already linked to scoped messages, and create mailbox-bound webhooks; attempts outside scope return 404. A scoped key must include mailboxId when creating a webhook. Account data, key management, mailbox creation/deletion, domains, suppressions, support, billing, and attachment UPLOAD require a full-access key and otherwise return 403. Trial onboarding keys cannot create or update webhooks or open SSE streams."
+      }
+    },
+    "parameters": {
+      "MailboxId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "Mailbox resource ID."
+      },
+      "ApiKeyId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "API key resource ID."
+      },
+      "DomainId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "Domain resource ID."
+      },
+      "WebhookId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "Webhook resource ID."
+      },
+      "AttachmentId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "Attachment resource ID."
+      }
+    },
+    "headers": {
+      "X-Robotomail-Inbound-Quota": {
+        "description": "Authenticated account inbound usage as count/limit, or count/unlimited.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9]+/([0-9]+|unlimited)$"
+        }
+      },
+      "X-Robotomail-Inbound-Warning": {
+        "description": "Present after the account crosses an inbound-usage warning threshold.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "approaching",
+            "near",
+            "reached"
+          ]
+        }
+      },
+      "X-Robotomail-Retriable": {
+        "description": "Whether retrying the same withheld-resource request without recovery can succeed.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "false"
+          ]
+        }
+      },
+      "X-Robotomail-Reset-At": {
+        "description": "UTC instant when a monthly inbound limit resets. Absent for upgrade-only trial limits.",
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "Retry-After": {
+        "description": "Seconds until a monthly inbound limit resets. Only emitted on monthly inbound-limit 402 responses.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "X-RateLimit-Remaining": {
+        "description": "Signup attempts remaining for the caller IP in the current window.",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Validation failed or the request body is malformed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "AuthenticatedBadRequest": {
+        "description": "Validation failed or the request body is malformed.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing, disabled, expired, malformed, or invalid API key.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "PaymentRequired": {
+        "description": "A legacy account is payment-gated, or a Free send violates its owner-only recipient restriction or monthly send allowance. TRIAL_SEND_LIMIT includes resetsAt; Free does not expire.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PaymentRequired"
+                },
+                {
+                  "$ref": "#/components/schemas/TrialPaymentRequired"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "InboundLimitExceeded": {
+        "description": "The requested message or attachment is withheld. Monthly limits recover at reset; trial limits recover only after upgrade.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          },
+          "X-Robotomail-Retriable": {
+            "$ref": "#/components/headers/X-Robotomail-Retriable"
+          },
+          "Retry-After": {
+            "$ref": "#/components/headers/Retry-After"
+          },
+          "X-Robotomail-Reset-At": {
+            "$ref": "#/components/headers/X-Robotomail-Reset-At"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/InboundLimitExceeded"
+            }
+          }
+        }
+      },
+      "PaymentOrInboundLimit": {
+        "description": "The account is payment-gated, or the requested message or attachment is withheld by an inbound limit.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          },
+          "X-Robotomail-Retriable": {
+            "$ref": "#/components/headers/X-Robotomail-Retriable"
+          },
+          "Retry-After": {
+            "$ref": "#/components/headers/Retry-After"
+          },
+          "X-Robotomail-Reset-At": {
+            "$ref": "#/components/headers/X-Robotomail-Reset-At"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PaymentRequired"
+                },
+                {
+                  "$ref": "#/components/schemas/InboundLimitExceeded"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Operation forbidden, including suspended-account, unverified-email, onboarding-key, mailbox-suspension, or credential restrictions.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Error"
+                },
+                {
+                  "$ref": "#/components/schemas/Suspended"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "ForbiddenScoped": {
+        "description": "This operation requires a full-access API key.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "This operation requires a full-access API key"
+            }
+          }
+        }
+      },
+      "ForbiddenWithPlan": {
+        "description": "Operation forbidden by credential, suspension, verification, or plan limits. Plan-limit bodies include an upgrade string.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Error"
+                },
+                {
+                  "$ref": "#/components/schemas/Suspended"
+                },
+                {
+                  "$ref": "#/components/schemas/PlanLimit"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found, owned by another account, or outside the key scope.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "EndpointNotFound": {
+        "description": "Catch-all response for a public API path that has no route.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/EndpointNotFound"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests for the rate-limited window. Carries a Retry-After header with the seconds until the window resets.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        },
+        "headers": {
+          "Retry-After": {
+            "$ref": "#/components/headers/Retry-After"
+          }
+        }
+      },
+      "AuthenticatedRateLimited": {
+        "description": "Send or SSE connection limit reached. Send-plan limits include an upgrade string.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Error"
+                },
+                {
+                  "$ref": "#/components/schemas/PlanLimit"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "The file exceeds 25 MB or the upload would exceed account storage. Free-plan storage errors may include an upgrade string.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Error"
+                },
+                {
+                  "$ref": "#/components/schemas/PlanLimit"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "The requested resource conflicts with existing account state.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "The server could not complete the operation.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "AuthenticatedServerError": {
+        "description": "The server could not complete the operation.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "BadGateway": {
+        "description": "The billing provider did not return a checkout URL.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Billing is not configured.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Deleted": {
+        "description": "Deleted.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DeletedResponse"
+            }
+          }
+        }
+      },
+      "Revoked": {
+        "description": "API key revoked.",
+        "headers": {
+          "X-Robotomail-Inbound-Quota": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Quota"
+          },
+          "X-Robotomail-Inbound-Warning": {
+            "$ref": "#/components/headers/X-Robotomail-Inbound-Warning"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RevokedResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "description": "Base JSON error envelope. Route-specific schemas add fields to this base."
+      },
+      "EndpointNotFound": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "const": "NOT_FOUND"
+          },
+          "message": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": "object",
+            "properties": {
+              "openapi": {
+                "type": "string",
+                "format": "uri"
+              },
+              "docs": {
+                "type": "string",
+                "format": "uri"
+              },
+              "endpoints": {
+                "type": "string",
+                "format": "uri"
+              },
+              "commonEndpoints": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "openapi",
+              "docs",
+              "endpoints",
+              "commonEndpoints"
+            ]
+          }
+        },
+        "required": [
+          "error",
+          "code",
+          "message",
+          "resolution"
+        ]
+      },
+      "UpgradeHint": {
+        "type": "object",
+        "properties": {
+          "browserUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "apiEndpoint": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "const": "POST"
+              },
+              "path": {
+                "type": "string",
+                "const": "/v1/billing/upgrade"
+              }
+            },
+            "required": [
+              "method",
+              "path"
+            ]
+          },
+          "hint": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "browserUrl",
+          "apiEndpoint",
+          "hint"
+        ]
+      },
+      "PaymentRequired": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "payment_required": {
+                "type": "boolean",
+                "const": true
+              },
+              "code": {
+                "type": "string",
+                "const": "PAYMENT_REQUIRED"
+              },
+              "upgrade": {
+                "$ref": "#/components/schemas/UpgradeHint"
+              }
+            },
+            "required": [
+              "payment_required",
+              "code",
+              "upgrade"
+            ]
+          }
+        ]
+      },
+      "TrialPaymentRequired": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "payment_required": {
+                "type": "boolean",
+                "const": true
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "TRIAL_RECIPIENT_LOCKED",
+                  "TRIAL_SEND_LIMIT",
+                  "TRIAL_EXPIRED"
+                ]
+              },
+              "upgrade": {
+                "$ref": "#/components/schemas/UpgradeHint"
+              },
+              "resetsAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Next UTC calendar-month boundary, included for TRIAL_SEND_LIMIT."
+              }
+            },
+            "required": [
+              "payment_required",
+              "code",
+              "upgrade"
+            ]
+          }
+        ]
+      },
+      "InboundLimitExceeded": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "INBOUND_LIMIT_EXCEEDED",
+                  "INBOUND_TRIAL_LIMIT_EXCEEDED"
+                ]
+              },
+              "resource": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "message",
+                      "attachment"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "type",
+                  "id"
+                ]
+              },
+              "upgrade": {
+                "$ref": "#/components/schemas/UpgradeHint"
+              },
+              "recovery": {
+                "type": "string",
+                "enum": [
+                  "reset",
+                  "upgrade"
+                ]
+              },
+              "resetAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Present only for monthly-limit recovery."
+              }
+            },
+            "required": [
+              "code",
+              "resource",
+              "upgrade",
+              "recovery"
+            ]
+          },
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "const": "INBOUND_LIMIT_EXCEEDED"
+                  },
+                  "recovery": {
+                    "type": "string",
+                    "const": "reset"
+                  },
+                  "resetAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "resetAt"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "const": "INBOUND_TRIAL_LIMIT_EXCEEDED"
+                  },
+                  "recovery": {
+                    "type": "string",
+                    "const": "upgrade"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "PlanLimit": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "upgrade": {
+                "type": "string",
+                "description": "Programmatic checkout hint."
+              }
+            },
+            "required": [
+              "upgrade"
+            ]
+          }
+        ]
+      },
+      "Suspended": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "suspended": {
+                "type": "boolean",
+                "const": true
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "suspended",
+              "reason"
+            ]
+          }
+        ]
+      },
+      "DeletedResponse": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "RevokedResponse": {
+        "type": "object",
+        "properties": {
+          "revoked": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "revoked"
+        ]
+      },
+      "SignupRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "description": "Unique non-reserved account slug."
+          },
+          "name": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string",
+            "description": "Optional intent. Only developer, growth, or scale paired with a valid period is retained; other strings fall back to the default Developer monthly path."
+          },
+          "period": {
+            "type": "string",
+            "description": "Optional intent. Recognized values are monthly and annual; other strings fall back to the default path."
+          },
+          "turnstileToken": {
+            "type": "string",
+            "description": "Required only for same-origin browser signups when the challenge service is configured."
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "slug"
+        ]
+      },
+      "SignupResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "plan": {
+                "type": "string",
+                "const": "free"
+              },
+              "platform_email": {
+                "type": "string",
+                "format": "email"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "slug",
+              "name",
+              "plan",
+              "platform_email"
+            ]
+          },
+          "api_key": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Raw bearer token shown exactly once."
+              },
+              "prefix": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "const": "default"
+              }
+            },
+            "required": [
+              "key",
+              "prefix",
+              "name"
+            ]
+          },
+          "mailbox": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "address": {
+                "type": "string"
+              },
+              "fullAddress": {
+                "type": "string",
+                "format": "email"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "PAUSED",
+                  "SUSPENDED"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "address",
+              "fullAddress",
+              "status"
+            ]
+          },
+          "mailbox_limit": {
+            "type": "integer"
+          },
+          "daily_send_limit": {
+            "type": "integer"
+          },
+          "monthly_send_limit": {
+            "type": "integer"
+          },
+          "email_verified": {
+            "type": "boolean",
+            "const": false
+          },
+          "next_steps": {
+            "type": "object",
+            "properties": {
+              "verify_email": {
+                "type": "string"
+              },
+              "add_payment": {
+                "type": "string"
+              },
+              "add_domain": {
+                "type": "string"
+              },
+              "send_email": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "verify_email",
+              "add_payment",
+              "add_domain",
+              "send_email"
+            ]
+          }
+        },
+        "required": [
+          "user",
+          "api_key",
+          "mailbox",
+          "mailbox_limit",
+          "daily_send_limit",
+          "monthly_send_limit",
+          "email_verified",
+          "next_steps"
+        ]
+      },
+      "SandboxTrial": {
+        "type": "object",
+        "properties": {
+          "isTrialUser": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "expired": {
+            "type": "boolean"
+          },
+          "exhausted": {
+            "type": "boolean"
+          },
+          "sendsUsed": {
+            "type": "integer"
+          },
+          "sendsRemaining": {
+            "type": "integer"
+          },
+          "sendCap": {
+            "type": "integer"
+          },
+          "receivesUsed": {
+            "type": "integer"
+          },
+          "receivesRemaining": {
+            "type": "integer"
+          },
+          "receiveCap": {
+            "type": "integer"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "resetsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "First instant of the next calendar month in UTC; null outside restricted Free."
+          }
+        },
+        "required": [
+          "isTrialUser",
+          "active",
+          "expired",
+          "exhausted",
+          "sendsUsed",
+          "sendsRemaining",
+          "sendCap",
+          "receivesUsed",
+          "receivesRemaining",
+          "receiveCap",
+          "expiresAt",
+          "startedAt"
+        ],
+        "description": "Permanent restricted Free plan usage. Legacy trial field names are retained for compatibility; active remains true at either monthly cap, expired and exhausted are false, and expiresAt is null."
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string",
+            "description": "Stored plan slug; legacy values may also be returned."
+          },
+          "billingPeriod": {
+            "type": "string"
+          },
+          "suspended": {
+            "type": "boolean"
+          },
+          "suspendedReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suspendedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "storageUsedBytes": {
+            "type": "integer"
+          },
+          "storageLimitBytes": {
+            "type": "integer"
+          },
+          "mailboxCount": {
+            "type": "integer"
+          },
+          "activeMailboxCount": {
+            "type": "integer"
+          },
+          "sentToday": {
+            "type": "integer"
+          },
+          "sentThisMonth": {
+            "type": "integer"
+          },
+          "receivedToday": {
+            "type": "integer"
+          },
+          "bouncedToday": {
+            "type": "integer"
+          },
+          "monthlyInboundCount": {
+            "type": "integer"
+          },
+          "monthlyInboundLimit": {
+            "type": "integer",
+            "description": "Zero means unlimited."
+          },
+          "monthlyInboundPercentage": {
+            "type": "integer"
+          },
+          "monthlyInboundResetAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "overLimitMessageCount": {
+            "type": "integer"
+          },
+          "billingLinked": {
+            "type": "boolean"
+          },
+          "annualAvailability": {
+            "type": "object",
+            "properties": {
+              "developer": {
+                "type": "boolean"
+              },
+              "growth": {
+                "type": "boolean"
+              },
+              "scale": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "developer",
+              "growth",
+              "scale"
+            ]
+          },
+          "trial": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SandboxTrial"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "emailVerified",
+          "slug",
+          "plan",
+          "billingPeriod",
+          "suspended",
+          "suspendedReason",
+          "suspendedAt",
+          "storageUsedBytes",
+          "storageLimitBytes",
+          "mailboxCount",
+          "activeMailboxCount",
+          "sentToday",
+          "sentThisMonth",
+          "receivedToday",
+          "bouncedToday",
+          "monthlyInboundCount",
+          "monthlyInboundLimit",
+          "monthlyInboundPercentage",
+          "monthlyInboundResetAt",
+          "overLimitMessageCount",
+          "billingLinked",
+          "annualAvailability",
+          "trial"
+        ]
+      },
+      "AccountResponse": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/Account"
+          }
+        },
+        "required": [
+          "account"
+        ]
+      },
+      "ApiKeySummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prefix": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "createdAt",
+          "enabled"
+        ]
+      },
+      "ApiKeyListResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeySummary"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "CreateApiKeyRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable label; whitespace is trimmed."
+          },
+          "mailboxIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scope the key to these owned mailboxes. Omit or pass an empty array for full access."
+          }
+        }
+      },
+      "CreateApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Raw bearer token shown exactly once."
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "scoped": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "prefix",
+          "scoped"
+        ]
+      },
+      "Mailbox": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "domainId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "address": {
+            "type": "string"
+          },
+          "fullAddress": {
+            "type": "string",
+            "format": "email"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dailySendCount": {
+            "type": "integer"
+          },
+          "dailySendLimit": {
+            "type": "integer"
+          },
+          "monthlySendCount": {
+            "type": "integer"
+          },
+          "monthlySendLimit": {
+            "type": "integer",
+            "description": "Zero means unlimited."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED",
+              "SUSPENDED"
+            ]
+          },
+          "pausedByBilling": {
+            "type": "boolean"
+          },
+          "stalwartProvisioned": {
+            "type": "boolean",
+            "description": "False until asynchronous mail-server provisioning completes."
+          },
+          "suspendedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "suspendedReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suspensionIncidentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Internal suspension incident identifier returned verbatim by the route."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "receivedThisMonth": {
+            "type": "integer",
+            "description": "Present only in list responses."
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "domainId",
+          "address",
+          "fullAddress",
+          "displayName",
+          "dailySendCount",
+          "dailySendLimit",
+          "monthlySendCount",
+          "monthlySendLimit",
+          "status",
+          "pausedByBilling",
+          "stalwartProvisioned",
+          "suspendedAt",
+          "suspendedReason",
+          "suspensionIncidentId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "MailboxResponse": {
+        "type": "object",
+        "properties": {
+          "mailbox": {
+            "$ref": "#/components/schemas/Mailbox"
+          }
+        },
+        "required": [
+          "mailbox"
+        ]
+      },
+      "MailboxListResponse": {
+        "type": "object",
+        "properties": {
+          "mailboxes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Mailbox"
+            }
+          }
+        },
+        "required": [
+          "mailboxes"
+        ]
+      },
+      "CreateMailboxRequest": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-zA-Z0-9._-]+$",
+            "description": "Mailbox local part."
+          },
+          "domainId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Verified owned custom domain."
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "UpdateMailboxRequest": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED"
+            ]
+          }
+        }
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "cc": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "maxItems": 50
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 998
+          },
+          "bodyText": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bodyHtml": {
+            "type": "string"
+          },
+          "inReplyTo": {
+            "type": "string",
+            "maxLength": 998,
+            "pattern": "^[^\\r\\n]*$",
+            "description": "RFC Message-ID to use for threading."
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 10,
+            "description": "Attachment IDs from POST /attachments. At most 10 IDs and 25 MB combined may be sent; exceeding the combined size currently surfaces as 500 {\"error\": \"Failed to send email\"} and the message row is marked FAILED."
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Only X-Custom-* and X-Robotomail-* headers without CR/LF survive filtering."
+          }
+        },
+        "required": [
+          "to",
+          "subject",
+          "bodyText"
+        ]
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mailboxId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "INBOUND",
+              "OUTBOUND"
+            ]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "RFC 5322 Message-ID."
+          },
+          "inReplyTo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "threadId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "fromAddress": {
+            "type": "string"
+          },
+          "toAddresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ccAddresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subject": {
+            "type": "string"
+          },
+          "bodyText": {
+            "type": "string"
+          },
+          "bodyHtml": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "QUEUED",
+              "SENT",
+              "DELIVERED",
+              "BOUNCED",
+              "COMPLAINED",
+              "FAILED",
+              "RECEIVED"
+            ]
+          },
+          "externalMessageId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hasAttachments": {
+            "type": "boolean"
+          },
+          "attachmentsDropped": {
+            "type": "boolean"
+          },
+          "attachmentsDroppedReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "eventDispatchedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Internal dispatch timestamp returned verbatim by raw message queries."
+          },
+          "overLimit": {
+            "type": "boolean"
+          },
+          "overLimitReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "MONTHLY",
+              "TRIAL",
+              null
+            ]
+          },
+          "pendingSseEventData": {
+            "description": "Internal nullable JSON pending SSE payload returned verbatim by raw message queries."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "description": "Present on message list/detail and thread-detail responses; absent from send success."
+          }
+        },
+        "required": [
+          "id",
+          "mailboxId",
+          "direction",
+          "messageId",
+          "inReplyTo",
+          "threadId",
+          "fromAddress",
+          "toAddresses",
+          "ccAddresses",
+          "subject",
+          "bodyText",
+          "bodyHtml",
+          "headers",
+          "status",
+          "externalMessageId",
+          "hasAttachments",
+          "attachmentsDropped",
+          "attachmentsDroppedReason",
+          "eventDispatchedAt",
+          "overLimit",
+          "overLimitReason",
+          "pendingSseEventData",
+          "createdAt"
+        ]
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/Message"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "InboundUsage": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "percentage": {
+            "type": "integer"
+          },
+          "reset_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "approaching",
+              "near",
+              "limit_reached"
+            ]
+          }
+        },
+        "required": [
+          "current",
+          "limit",
+          "percentage",
+          "reset_date",
+          "status"
+        ]
+      },
+      "ListMetadata": {
+        "type": "object",
+        "properties": {
+          "overLimitCount": {
+            "type": "integer"
+          },
+          "upgrade": {
+            "$ref": "#/components/schemas/UpgradeHint"
+          },
+          "limitHint": {
+            "$ref": "#/components/schemas/InboundUsage"
+          }
+        },
+        "required": [
+          "overLimitCount",
+          "upgrade"
+        ]
+      },
+      "MessageListResponse": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "required": [
+          "messages",
+          "metadata"
+        ]
+      },
+      "Attachment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          },
+          "r2Key": {
+            "type": "string",
+            "description": "Internal object-storage key returned verbatim by the route."
+          },
+          "contentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "messageId",
+          "userId",
+          "filename",
+          "contentType",
+          "sizeBytes",
+          "r2Key",
+          "contentId",
+          "createdAt"
+        ]
+      },
+      "AttachmentUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "sizeBytes"
+        ]
+      },
+      "AttachmentDownload": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Attachment"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "Presigned download URL."
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        ]
+      },
+      "Thread": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mailboxId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "messageCount": {
+            "type": "integer"
+          },
+          "lastMessageAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "mailboxId",
+          "subject",
+          "messageCount",
+          "lastMessageAt",
+          "participants",
+          "createdAt"
+        ]
+      },
+      "ThreadDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Thread"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "messages": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "required": [
+              "messages"
+            ]
+          }
+        ]
+      },
+      "ThreadListResponse": {
+        "type": "object",
+        "properties": {
+          "threads": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/Thread"
+            }
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ListMetadata"
+          }
+        },
+        "required": [
+          "threads",
+          "metadata"
+        ]
+      },
+      "ThreadResponse": {
+        "type": "object",
+        "properties": {
+          "thread": {
+            "$ref": "#/components/schemas/ThreadDetail"
+          }
+        },
+        "required": [
+          "thread"
+        ]
+      },
+      "Domain": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_VERIFICATION",
+              "DNS_VERIFIED",
+              "VERIFIED",
+              "FAILED"
+            ]
+          },
+          "mxVerified": {
+            "type": "boolean"
+          },
+          "spfVerified": {
+            "type": "boolean"
+          },
+          "dkimVerified": {
+            "type": "boolean"
+          },
+          "dmarcVerified": {
+            "type": "boolean"
+          },
+          "dkimPublicKey": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dkimSelector": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Internal serialized provider DKIM record set returned verbatim by the route."
+          },
+          "externalDomainId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "External provider domain identifier returned verbatim by the route."
+          },
+          "stalwartProvisioned": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "domain",
+          "status",
+          "mxVerified",
+          "spfVerified",
+          "dkimVerified",
+          "dmarcVerified",
+          "dkimPublicKey",
+          "dkimSelector",
+          "externalDomainId",
+          "stalwartProvisioned",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "MxDnsRecord": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "MX"
+          },
+          "host": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "host",
+          "value",
+          "priority"
+        ]
+      },
+      "TxtDnsRecord": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "TXT"
+          },
+          "host": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "host",
+          "value"
+        ]
+      },
+      "DkimDnsRecord": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "CNAME",
+              "TXT"
+            ]
+          },
+          "host": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "host",
+          "value"
+        ]
+      },
+      "DnsRecords": {
+        "type": "object",
+        "properties": {
+          "mx": {
+            "$ref": "#/components/schemas/MxDnsRecord"
+          },
+          "sendMx": {
+            "$ref": "#/components/schemas/MxDnsRecord"
+          },
+          "spf": {
+            "$ref": "#/components/schemas/TxtDnsRecord"
+          },
+          "dkim": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DkimDnsRecord"
+            }
+          },
+          "dmarc": {
+            "$ref": "#/components/schemas/TxtDnsRecord"
+          }
+        },
+        "required": [
+          "mx",
+          "sendMx",
+          "spf",
+          "dkim",
+          "dmarc"
+        ]
+      },
+      "CreateDomainRequest": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\\.[a-zA-Z]{2,}$"
+          }
+        },
+        "required": [
+          "domain"
+        ]
+      },
+      "DomainListResponse": {
+        "type": "object",
+        "properties": {
+          "domains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Domain"
+            }
+          }
+        },
+        "required": [
+          "domains"
+        ]
+      },
+      "DomainCreatedResponse": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "$ref": "#/components/schemas/Domain"
+          },
+          "dnsRecords": {
+            "$ref": "#/components/schemas/DnsRecords"
+          }
+        },
+        "required": [
+          "domain",
+          "dnsRecords"
+        ]
+      },
+      "DomainResponse": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "$ref": "#/components/schemas/Domain"
+          },
+          "dnsRecords": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/DnsRecords"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "domain",
+          "dnsRecords"
+        ]
+      },
+      "DomainVerificationResponse": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "$ref": "#/components/schemas/Domain"
+          },
+          "verification": {
+            "type": "object",
+            "properties": {
+              "mx": {
+                "type": "boolean"
+              },
+              "spf": {
+                "type": "boolean"
+              },
+              "dkim": {
+                "type": "boolean"
+              },
+              "dmarc": {
+                "type": "boolean"
+              },
+              "allVerified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mx",
+              "spf",
+              "dkim",
+              "dmarc",
+              "allVerified"
+            ]
+          }
+        },
+        "required": [
+          "domain",
+          "verification"
+        ]
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "mailboxId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "message.received",
+                "message.sent",
+                "message.delivered",
+                "message.bounced",
+                "message.complaint"
+              ]
+            }
+          },
+          "headers": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Values are masked outside create and update responses."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED",
+              "FAILED"
+            ]
+          },
+          "failureCount": {
+            "type": "integer"
+          },
+          "lastTriggeredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "mailboxId",
+          "url",
+          "events",
+          "headers",
+          "status",
+          "failureCount",
+          "lastTriggeredAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "WebhookCreated": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Webhook"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "secret": {
+                "type": "string",
+                "description": "HMAC-SHA256 signing secret shown once."
+              }
+            },
+            "required": [
+              "secret"
+            ]
+          }
+        ]
+      },
+      "WebhookHeaders": {
+        "type": "object",
+        "maxProperties": 10,
+        "propertyNames": {
+          "type": "string",
+          "maxLength": 256,
+          "pattern": "^[!#$%&'*+\\-.^_`|~0-9A-Za-z]+$"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "description": "Header names must be HTTP tokens. Host, content headers, connection headers, X-Robotomail-* names, and control characters are rejected."
+      },
+      "CreateWebhookRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "description": "Must be HTTPS and must not use a blocked/local hostname or private IPv4 literal. DNS addresses are validated again at delivery time."
+          },
+          "mailboxId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required for scoped keys; optional for full-access keys."
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "message.received",
+                "message.sent",
+                "message.delivered",
+                "message.bounced",
+                "message.complaint"
+              ]
+            }
+          },
+          "headers": {
+            "$ref": "#/components/schemas/WebhookHeaders"
+          }
+        },
+        "required": [
+          "url",
+          "events"
+        ]
+      },
+      "UpdateWebhookRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://"
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "message.received",
+                "message.sent",
+                "message.delivered",
+                "message.bounced",
+                "message.complaint"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED"
+            ]
+          },
+          "headers": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/WebhookHeaders"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "WebhookListResponse": {
+        "type": "object",
+        "properties": {
+          "webhooks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Webhook"
+            }
+          }
+        },
+        "required": [
+          "webhooks"
+        ]
+      },
+      "WebhookResponse": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "$ref": "#/components/schemas/Webhook"
+          }
+        },
+        "required": [
+          "webhook"
+        ]
+      },
+      "WebhookCreatedResponse": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "$ref": "#/components/schemas/WebhookCreated"
+          }
+        },
+        "required": [
+          "webhook"
+        ]
+      },
+      "WebhookDelivery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event": {
+            "type": "string"
+          },
+          "responseStatus": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "DELIVERED",
+              "FAILED"
+            ]
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "nextRetryAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "event",
+          "responseStatus",
+          "status",
+          "attempts",
+          "nextRetryAt",
+          "createdAt"
+        ]
+      },
+      "WebhookDeliveryListResponse": {
+        "type": "object",
+        "properties": {
+          "deliveries": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/WebhookDelivery"
+            }
+          }
+        },
+        "required": [
+          "deliveries"
+        ]
+      },
+      "SuppressionEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "BOUNCE",
+              "COMPLAINT",
+              "MANUAL"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "reason",
+          "createdAt"
+        ]
+      },
+      "CreateSuppressionRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "BOUNCE",
+              "COMPLAINT",
+              "MANUAL"
+            ],
+            "default": "MANUAL"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "SuppressionListResponse": {
+        "type": "object",
+        "properties": {
+          "suppressions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuppressionEntry"
+            }
+          }
+        },
+        "required": [
+          "suppressions"
+        ]
+      },
+      "SuppressionResponse": {
+        "type": "object",
+        "properties": {
+          "suppression": {
+            "$ref": "#/components/schemas/SuppressionEntry"
+          }
+        },
+        "required": [
+          "suppression"
+        ]
+      },
+      "UpgradeRequest": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": [
+              "developer",
+              "growth",
+              "scale"
+            ],
+            "default": "developer"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "annual"
+            ],
+            "default": "monthly"
+          }
+        }
+      },
+      "UpgradeCheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "checkout_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expires_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Checkout expiry as Unix seconds; can be null on a reused provider session."
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "checkout_url",
+          "expires_at",
+          "message"
+        ]
+      },
+      "SupportRequest": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "technical",
+              "billing",
+              "account",
+              "other"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "category",
+          "subject",
+          "message"
+        ]
+      },
+      "OkResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "SlugAvailability": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Present only for reserved slugs."
+          }
+        },
+        "required": [
+          "available"
+        ]
+      }
+    },
+    "x-webhook-events": [
+      "message.received",
+      "message.sent",
+      "message.delivered",
+      "message.bounced",
+      "message.complaint"
+    ]
+  },
+  "x-agent-notes": {
+    "whenToUse": "Use Robotomail when an AI agent needs its own send AND receive email identity: autonomous outreach with reply handling, customer-support inboxes, notification+response loops, multi-agent mail separation, or any workload interactive consent flows or one-way transactional services fit badly.",
+    "authPattern": "Sign up once with POST /signup. A human must verify the signup email before the key works (this enables Free: 10 sends and 10 receives per calendar month, only with the verified owner; upgrade for other correspondents or higher limits); then give every agent its own mailbox-scoped key with POST /api-keys and mailboxIds.",
+    "receivePattern": "Prefer webhooks with POST /webhooks for push delivery; use GET /events for interactive SSE sessions; poll GET /mailboxes/{id}/messages otherwise.",
+    "selfOnboarding": "Agents can prepare signup by following https://robotomail.com/skill.md, but a human must verify the signup email before the key works; Free then includes 10 sends and 10 receives per calendar month with the verified owner, with no expiry or card required."
+  }
+}

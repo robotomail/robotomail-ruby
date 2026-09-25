@@ -4,7 +4,7 @@
     "title": "Robotomail API",
     "version": "1.0.0",
     "summary": "Email infrastructure for AI agents",
-    "description": "Robotomail provisions and manages real email mailboxes for AI agents. Agents create mailboxes, send and receive email, manage custom domains, subscribe to inbound webhooks, and read threads \u2014 entirely through this REST API.\n\n## Authentication\n\nAccount signup, slug availability, and verification-email resend are unauthenticated. All other documented endpoints authenticate with an API key passed as a bearer token:\n\n```\nAuthorization: Bearer <API_KEY>\n```\n\nKeys are created at signup (returned once in the response body) or via `POST /api-keys`. The signup key does nothing until a human verifies the signup email; verification enables the permanent Free plan: one mailbox, 10 sends and 10 receives per calendar month, only with the owner's verified email. Quotas are account-wide and renew at 00:00 UTC on the first of each month. Reaching one cap leaves the other direction and saved messages accessible. Sends above the cap return 402 TRIAL_SEND_LIMIT with resetsAt. Other inbound mail and mail above the receive cap are discarded, with no backlog on renewal. Upgrade for other correspondents or higher limits. Two key types exist:\n\n- **Full-access keys** \u2014 can perform account-level operations and upload attachments.\n- **Mailbox-scoped keys** \u2014 restricted to the mailboxes listed in their `mailboxIds` scope. Scoped keys can list, read, send, and mutate within scoped mailboxes; they can create mailbox-bound webhooks but cannot create account-wide webhooks. Give each agent its own scoped key so a compromise cannot touch other mailboxes.\n\n## Errors\n\nEvery route-produced error is JSON: `{ \"error\": string, ...context }`. Context fields vary by gate \u2014 payment gates include `payment_required: true`, `code`, and an `upgrade` object; inbound-limit gates identify the withheld resource and recovery mode. Unknown paths return a structured JSON 404 with `error`, `code`, `message`, and `resolution`, never HTML.\n\n## Quota headers\n\nAuthenticated JSON responses carry `X-Robotomail-Inbound-Quota: <count>/<limit>` plus, after a threshold is crossed, `X-Robotomail-Inbound-Warning` (`approaching|near|reached`). Inbound-limit 402 responses also carry `X-Robotomail-Retriable: false`; monthly-limit responses add `Retry-After` and `X-Robotomail-Reset-At`. Route-produced 429 responses do not emit `Retry-After`.\n\n## Webhooks & SSE\n\nInbound email arrives either via webhooks (`POST /webhooks`, HMAC-SHA256 signed with `X-Robotomail-Signature`) or server-sent events (`GET /events`).\n\n## More for agents\n\n- MCP and connectors: https://robotomail.com/docs/mcp (setup guide; discover MCP tool schemas via tools/list at https://robotomail.com/mcp)\n- OpenAPI spec: https://robotomail.com/openapi.json (this file)\n- Agent onboarding instructions: https://robotomail.com/skill.md\n- Machine-readable site map: https://robotomail.com/llms.txt\n- Docs index (markdown): https://robotomail.com/docs.md\n- CLI: https://www.npmjs.com/package/@robotomail/cli\n\n## Versioning and deprecation\n\nThe API is URL-versioned; the current version is `/v1`. Backwards-incompatible changes ship as a new version path, never in place; additive changes (new endpoints, new optional fields, new enum values documented as open) happen without a version bump. If an endpoint or version is retired, the deprecation is announced at least 30 days in advance in the changelog (https://robotomail.com/docs/changelog) and signalled with `Deprecation` and `Sunset` headers on affected responses.",
+    "description": "Robotomail provisions and manages real email mailboxes for AI agents. Agents create mailboxes, send and receive email, manage custom domains, subscribe to inbound webhooks, and read threads \u2014 entirely through this REST API.\n\n## Authentication\n\nAccount signup, slug availability, and verification-email resend are unauthenticated. All other documented endpoints authenticate with an API key passed as a bearer token:\n\n```\nAuthorization: Bearer <API_KEY>\n```\n\nKeys are created at signup (returned once in the response body) or via `POST /api-keys`. The signup key does nothing until a human verifies the signup email; verification enables the permanent Free plan: one mailbox, 10 sends and 10 receives per calendar month, only with the owner's verified email. Quotas are account-wide and renew at 00:00 UTC on the first of each month. Reaching one cap leaves the other direction and saved messages accessible. Sends above the cap return 402 TRIAL_SEND_LIMIT with resetsAt. Other inbound mail and mail above the receive cap are discarded, with no backlog on renewal. Upgrade for other correspondents or higher limits. Two key types exist:\n\n- **Full-access keys** \u2014 can perform account-level operations and upload attachments.\n- **Mailbox-scoped keys** \u2014 restricted to the mailboxes listed in their `mailboxIds` scope. Scoped keys can list, read, send, and mutate within scoped mailboxes; they can create mailbox-bound webhooks but cannot create account-wide webhooks. Give each agent its own scoped key so a compromise cannot touch other mailboxes.\n\n## Errors\n\nEvery route-produced error is JSON: `{ \"error\": string, ...context }`. Context fields vary by gate \u2014 payment gates include `payment_required: true`, `code`, and an `upgrade` object; inbound-limit gates identify the withheld resource and recovery mode. Unknown paths return a structured JSON 404 with `error`, `code`, `message`, and `resolution`, never HTML.\n\n## Quota headers\n\nAuthenticated JSON responses carry `X-Robotomail-Inbound-Quota: <count>/<limit>` plus, after a threshold is crossed, `X-Robotomail-Inbound-Warning` (`approaching|near|reached`). Inbound-limit 402 responses also carry `X-Robotomail-Retriable: false`; monthly-limit responses add `Retry-After` and `X-Robotomail-Reset-At`. Route-produced 429 responses do not emit `Retry-After`.\n\n## Webhooks & SSE\n\nInbound email arrives either via webhooks (`POST /webhooks`, HMAC-SHA256 signed with `X-Robotomail-Signature`) or server-sent events (`GET /events`).\n\n## More for agents\n\n- MCP and connectors: https://robotomail.com/docs/mcp (setup guide; discover MCP tool schemas via tools/list at https://robotomail.com/mcp)\n- OpenAPI spec: https://robotomail.com/openapi.json (this file)\n- Agent onboarding instructions: https://robotomail.com/skill.md\n- Machine-readable site map: https://robotomail.com/llms.txt\n- Docs index (markdown): https://robotomail.com/docs.md\n- CLI: https://www.npmjs.com/package/@robotomail/cli\n\n## Versioning and deprecation\n\nThe API is URL-versioned; the current version is `/v1`. Backwards-incompatible changes ship as a new version path, never in place; additive changes (new endpoints, new optional fields, new enum values documented as open) happen without a version bump. If an endpoint or version is retired, the deprecation is announced at least 30 days in advance in the changelog (https://robotomail.com/docs/changelog) and signalled with `Deprecation` and `Sunset` headers on affected responses.\n\nOfficial SDKs for TypeScript/JavaScript, Python, Go, Ruby and Rust: https://robotomail.com/docs/sdks",
     "termsOfService": "https://robotomail.com/terms",
     "contact": {
       "name": "Robotomail support",
@@ -3572,6 +3572,15 @@
             },
             "maxItems": 50
           },
+          "bcc": {
+            "type": "array",
+            "description": "Blind-copy recipients. They receive the email but do not appear in its headers, so other recipients cannot see them. Counted toward send limits and checked against the suppression list like `to` and `cc`.",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "maxItems": 50
+          },
           "subject": {
             "type": "string",
             "minLength": 1,
@@ -3659,6 +3668,13 @@
           },
           "ccAddresses": {
             "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bccAddresses": {
+            "type": "array",
+            "description": "Blind-copy recipients of an outbound message. Always empty for inbound messages.",
             "items": {
               "type": "string"
             }
@@ -3756,6 +3772,7 @@
           "fromAddress",
           "toAddresses",
           "ccAddresses",
+          "bccAddresses",
           "subject",
           "bodyText",
           "bodyHtml",

@@ -448,6 +448,9 @@
           "ccAddresses": [
             "sample-ccAddresses"
           ],
+          "bccAddresses": [
+            "sample-bccAddresses"
+          ],
           "subject": "sample-subject",
           "bodyText": "sample-bodyText",
           "bodyHtml": "sample-bodyHtml",
@@ -515,6 +518,9 @@
       "cc": [
         "fixture@example.com"
       ],
+      "bcc": [
+        "fixture@example.com"
+      ],
       "subject": "sample-subject",
       "bodyText": "sample-bodyText",
       "bodyHtml": "sample-bodyHtml",
@@ -541,6 +547,9 @@
         ],
         "ccAddresses": [
           "sample-ccAddresses"
+        ],
+        "bccAddresses": [
+          "sample-bccAddresses"
         ],
         "subject": "sample-subject",
         "bodyText": "sample-bodyText",
@@ -600,6 +609,9 @@
         ],
         "ccAddresses": [
           "sample-ccAddresses"
+        ],
+        "bccAddresses": [
+          "sample-bccAddresses"
         ],
         "subject": "sample-subject",
         "bodyText": "sample-bodyText",
@@ -717,6 +729,9 @@
             ],
             "ccAddresses": [
               "sample-ccAddresses"
+            ],
+            "bccAddresses": [
+              "sample-bccAddresses"
             ],
             "subject": "sample-subject",
             "bodyText": "sample-bodyText",

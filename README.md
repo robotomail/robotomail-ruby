@@ -12,7 +12,7 @@ The initial release is installable from the tagged GitHub repository:
 
 ```ruby
 # Gemfile
-gem "robotomail", git: "https://github.com/robotomail/robotomail-ruby", tag: "v0.1.0"
+gem "robotomail", git: "https://github.com/robotomail/robotomail-ruby", tag: "v0.2.0"
 ```
 
 The `robotomail` package is prepared for RubyGems; registry publication is a separate release step. The GitHub installation above works before that step.

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    robotomail (0.1.0)
+    robotomail (0.2.0)
       net-http (>= 0.4, < 1)
       openssl (>= 3, < 5)
 

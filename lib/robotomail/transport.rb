@@ -44,7 +44,7 @@ module Robotomail
 
     def prepare(path, params, streaming: false)
       uri = URI(@base_url + path)
-      headers = {"Accept" => streaming ? "text/event-stream" : "application/json", "User-Agent" => "robotomail-ruby/0.1.0"}
+      headers = {"Accept" => streaming ? "text/event-stream" : "application/json", "User-Agent" => "robotomail-ruby/0.2.0"}
       headers["Authorization"] = "Bearer #{@api_key}" if @api_key && !@api_key.empty?
       query = {}
       params.each do |key, value|
